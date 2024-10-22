@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="60">  <!-- Refresh every 60 seconds -->
+    <title>Live Cricket Score</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f4f4; 
+            text-align: center; 
+            padding: 50px; 
+        }
+        h1 { 
+            color: #333; 
+        }
+    </style>
+    <script>
+        async function fetchScore() {
+            const response = await fetch('score.txt');
+            const scoreText = await response.text();
+            document.getElementById('score').innerText = scoreText;
+            document.getElementById('lastUpdated').innerText = 'Last updated: ' + new Date().toLocaleString();
+        }
+        setInterval(fetchScore, 60000); // Fetch score every 60 seconds
+    </script>
+</head>
+<body>
+    <h1>Current Cricket Score</h1>
+    <p id="score">Loading...</p>
+    <p id="lastUpdated">Last updated: </p>
+</body>
+</html>
