@@ -1,0 +1,108 @@
+import requests
+import time
+import telegram
+from telegram.error import TelegramError
+
+# Replace with your Telegram bot token
+bot_token = 'YOUR_TELEGRAM_BOT_TOKEN'
+
+# Base URL for the API
+base_url = 'https://cricbuzz-live.vercel.app'
+
+# Function to get list of live matches
+def get_live_matches():
+    url = f'{base_url}/v1/matches/live'
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Failed to fetch live matches. Status code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        print(f"Error fetching data: {e}")
+        return None
+
+# Function to get match score by matchId
+def get_match_score(match_id):
+    url = f'{base_url}/v1/score/{match_id}'
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Failed to fetch match score. Status code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        print(f"Error fetching data: {e}")
+        return None
+
+# Function to send Telegram message
+def send_telegram_message(bot, chat_id, message):
+    try:
+        bot.send_message(chat_id=chat_id, text=message)
+    except TelegramError as e:
+        print(f"Error sending message: {e}")
+
+# Function to fetch the chat ID of the user who interacts with the bot
+def get_chat_id(bot):
+    updates = bot.get_updates()
+    if updates:
+        return updates[-1].message.chat_id  # Gets the latest chat ID
+    else:
+        print("No updates found.")
+        return None
+
+# Function to process match data and send updates via Telegram
+def process_and_send_match_update(bot, chat_id, match_id):
+    data = get_match_score(match_id)
+    
+    if data and data.get('message') == "Matches data successfully retrieved":
+        match = data['data']
+        match_title = match.get('title', 'Unknown Match')
+        match_update = match.get('update', 'No updates available')
+        live_score = match.get('liveScore', 'N/A')
+        batsman_one = match.get('batsmanOne', 'N/A')
+        batsman_two = match.get('batsmanTwo', 'N/A')
+        bowler_one = match.get('bowlerOne', 'N/A')
+        
+        # Construct the message to send to Telegram
+        message = (f"🏏 {match_title}\n"
+                   f"Live Score: {live_score}\n"
+                   f"Update: {match_update}\n"
+                   f"Batsman 1: {batsman_one}\n"
+                   f"Batsman 2: {batsman_two}\n"
+                   f"Bowler 1: {bowler_one}")
+        
+        # Send the message via Telegram
+        send_telegram_message(bot, chat_id, message)
+    else:
+        print("No valid match data received.")
+
+# Main loop to fetch live matches and send updates every second
+if __name__ == '__main__':
+    bot = telegram.Bot(token=bot_token)
+
+    chat_id = None
+    while not chat_id:
+        chat_id = get_chat_id(bot)  # Fetch chat_id dynamically
+        if chat_id:
+            print(f"Chat ID found: {chat_id}")
+        else:
+            print("Waiting for user interaction to fetch chat_id...")
+
+    while True:
+        live_matches = get_live_matches()
+        if live_matches and live_matches.get('message') == "Matches data successfully retrieved":
+            matches = live_matches['data']['matches']
+            
+            # Send updates for the first live match (you can adjust which match to select)
+            if matches:
+                match_id = matches[0]['id']
+                process_and_send_match_update(bot, chat_id, match_id)
+            else:
+                print("No live matches available.")
+        else:
+            print("Failed to retrieve live matches.")
+
+        time.sleep(1)  # Fetch and send updates every second
